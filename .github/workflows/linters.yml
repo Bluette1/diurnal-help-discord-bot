@@ -13,4 +13,4 @@ jobs:
       - name: Setup Eslint
         run: yarn --ignore-engines
       - name: Eslint Report
-        run: npx eslint . --ext .js,.ts,.json
+        run: npx eslint . 
