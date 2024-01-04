@@ -1,10 +1,11 @@
 {
   "name": "sunny_help",
   "version": "1.0.0",
-  "description": "",
+  "description": "A utility bot with several features to help you throughout your day.",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node src/bot.js",
+    "lint": "eslint ."
   },
   "author": "",
   "license": "ISC",
@@ -16,5 +17,8 @@
     "express": "^4.18.2",
     "requests": "^0.3.0"
   },
-  "type": "module"
+  "type": "module",
+  "devDependencies": {
+    "eslint": "^8.56.0"
+  }
 }
