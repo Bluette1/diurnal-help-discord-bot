@@ -1,7 +1,7 @@
 import { Client, GatewayIntentBits } from 'discord.js';
 import { REST, Routes } from 'discord.js';
 import 'dotenv/config';
-import WebhookListener  from './webhook_listener.js';
+import webhookListener from './webhook_listener.js';
 
 const commands = [
 	{
@@ -57,13 +57,14 @@ client.on('interactionCreate', async (interaction) => {
 const premiumRole = {
 	name: 'Premium Member',
 	color: 0x6aa84f,
-	hoist: true, // Show users with this role in their own section of the member list.
+	hoist: true,
 };
 
 async function updateMemberRoleForDonation(guild, member, donationAmount) {
-	// If the user donated more than $10, give them the premium role.
+
+
 	if (guild && member && donationAmount >= PREMIUM_CUTOFF) {
-		// Get the role, or if it doesn't exist, create it.
+
 		let role = Array.from(await guild.roles.fetch()).find(
 			(existingRole) => existingRole.name === premiumRole.name,
 		);
@@ -72,8 +73,6 @@ async function updateMemberRoleForDonation(guild, member, donationAmount) {
 			role = await guild.roles.create(premiumRole);
 		}
 
-		// Add the role to the user, along with an explanation
-		// for the guild log (the "audit log").
 		return await member.roles.add(role.id, 'Donated $10 or more.');
 	}
 }
@@ -109,9 +108,6 @@ commandHandlerForCommandName['addpayment'] = {
 client.on('messageCreate', async (msg) => {
 	const content = msg.content;
 
-	// Ignore any messages sent as direct messages.
-	// The bot will only accept commands issued in
-	// a guild.
 	if (!msg.channel.guild) {
 		return;
 	}
@@ -128,24 +124,20 @@ client.on('messageCreate', async (msg) => {
 		.filter((s) => s);
 	const commandName = parts[0].substr(PREFIX.length);
 
-	// Get the appropriate handler for the command, if there is one.
 	const command = commandHandlerForCommandName[commandName];
 	if (!command) {
 		return;
 	}
 
-	// If this command is only for the bot owner, refuse
-	// to execute it for any other user.
+
 	const authorIsBotOwner = msg.author.id === BOT_OWNER_ID;
 	if (command.botOwnerOnly && !authorIsBotOwner) {
 		return await msg.channel.send('Hey, only my owner can issue that command!');
 	}
 
-	// Separate the command arguments from the command prefix and command name.
 	const args = parts.slice(1);
 
 	try {
-		// Execute the command.
 		await command.execute(msg, args);
 	}
 	catch (err) {
@@ -166,4 +158,52 @@ client.on('error', (err) => {
 	console.warn(err);
 });
 
+async function findUserInString(str) {
+	const lowercaseStr = str.toLowerCase();
+	const guilds = await client.guilds.cache;
+
+	let user = null;
+	await Promise.all(
+
+		guilds.map(async (guild) => {
+			const members = await guild.members.fetch();
+
+			members.map(async (member) => {
+				if (
+					lowercaseStr.indexOf(
+						`${member.user.username.toLowerCase()}#${member.user.discriminator}`,
+					) !== -1
+				) {
+					user = member;
+				}
+			});
+		}),
+	);
+
+
+	return user;
+}
+
+async function onDonation(
+	paymentSource,
+	paymentId,
+	timestamp,
+	amount,
+	senderName,
+	message,
+) {
+	try {
+		const user = await findUserInString(message);
+		const guild = user ? (await client.guilds.cache).find(async currGuild => await currGuild.members.fetch(user.id)) : null;
+		const guildMember = guild ? await guild.members.fetch(user.id) : null;
+
+		return await updateMemberRoleForDonation(guild, guildMember, amount);
+	}
+	catch (err) {
+		console.warn('Error handling donation event.');
+		console.warn(err);
+	}
+}
+
+webhookListener.on('donation', onDonation);
 client.login(TOKEN);
