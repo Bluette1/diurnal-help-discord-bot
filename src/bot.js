@@ -1,7 +1,14 @@
 import { Client, GatewayIntentBits } from 'discord.js';
 import { REST, Routes } from 'discord.js';
 import 'dotenv/config';
-import webhookListener from './webhook_listener.js';
+import webhookListener from './webhooks/webhook_listener.js';
+import OpenAI from 'openai';
+
+
+const newCommands = {
+  name: 'ask',
+  description: 'Replies with Fire away!',
+};
 
 const commands = [
   {
@@ -9,10 +16,12 @@ const commands = [
     description: 'Replies with Pong!',
   },
 ];
+
 const TOKEN = process.env.TOKEN;
 const CLIENT_ID = process.env.CLIENT_ID;
-const PREFIX = 'pb!';
+const PREFIX = 'sh!';
 const BOT_OWNER_ID = process.env.BOT_OWNER_ID;
+const BOT_ID = process.env.BOT_ID;
 const PREMIUM_CUTOFF = 10;
 const LOG_CHANNEL_ID = '1194720201464348704';
 
@@ -21,8 +30,8 @@ const rest = new REST({ version: '10' }).setToken(TOKEN);
 const updateCommands = async () => {
   try {
     console.log('Started refreshing application (/) commands.');
-
     await rest.put(Routes.applicationCommands(CLIENT_ID), { body: commands });
+    await rest.post(Routes.applicationCommands(CLIENT_ID), { body: newCommands });
 
     console.log('Successfully reloaded application (/) commands.');
   }
@@ -31,7 +40,9 @@ const updateCommands = async () => {
   }
 };
 
-updateCommands();
+if (parseInt(process.env.UPDATE_COMMANDS)) {
+  updateCommands();
+}
 
 const client = new Client({
   intents: [
@@ -40,6 +51,9 @@ const client = new Client({
     GatewayIntentBits.GuildMessageReactions,
     GatewayIntentBits.MessageContent,
     GatewayIntentBits.GuildMembers,
+    GatewayIntentBits.DirectMessages,
+    GatewayIntentBits.DirectMessageReactions,
+    GatewayIntentBits.DirectMessageTyping,
   ],
 });
 
@@ -52,6 +66,12 @@ client.on('interactionCreate', async (interaction) => {
 
   if (interaction.commandName === 'ping') {
     await interaction.reply('Pong!');
+  }
+
+  if (interaction.commandName === 'ask') {
+    const { user } = interaction;
+    await interaction.reply('Fire away!');
+    await user.createDM();
   }
 });
 
@@ -76,9 +96,13 @@ async function updateMemberRoleForDonation(guild, member, donationAmount) {
 }
 
 const commandHandlerForCommandName = {};
+
 commandHandlerForCommandName['addpayment'] = {
   botOwnerOnly: true,
   execute: async (msg, args) => {
+    if (!msg.channel.guild) {
+      return;
+    }
     const mention = args[0];
 
     const amount = parseFloat(args[1]);
@@ -103,16 +127,40 @@ commandHandlerForCommandName['addpayment'] = {
   },
 };
 
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+
+let userInfo = {
+  user: '',
+  conversationArr: [],
+};
+
+const fetchReply = async function(message, user) {
+  const { user: currentUser, conversationArr } = userInfo;
+  // Different user, reset the context
+  if (user.id !== currentUser) {
+    userInfo = {
+      user: user.id,
+      conversationArr: [],
+    };
+  }
+  conversationArr.push({
+    role: 'user',
+    content: message,
+  });
+  const response = await openai.chat.completions.create({
+    model: 'gpt-4',
+    messages: conversationArr,
+  });
+
+  conversationArr.push(response.choices[0].message);
+  return response.choices[0].message.content;
+};
+
+
 client.on('messageCreate', async (msg) => {
   const content = msg.content;
-
-  if (!msg.channel.guild) {
-    return;
-  }
-
-  if (!content.startsWith(PREFIX)) {
-    return;
-  }
 
   const parts = content
     .split(' ')
@@ -121,8 +169,17 @@ client.on('messageCreate', async (msg) => {
   const commandName = parts[0].substr(PREFIX.length);
 
   const command = commandHandlerForCommandName[commandName];
-  if (!command) {
+
+  const user = msg.author;
+
+  if (user.id === BOT_ID) {
     return;
+  }
+
+  if (!content.startsWith(PREFIX) && !command) {
+    // call ChatGPT
+    const reply = await fetchReply(content, user);
+    return await msg.channel.send(reply);
   }
 
   const authorIsBotOwner = msg.author.id === BOT_OWNER_ID;
@@ -231,7 +288,15 @@ async function onDonation(
 
     return await Promise.all([
       updateMemberRoleForDonation(guild, guildMember, amount),
-      logDonation(guildMember, amount, paymentSource, paymentId, senderName, message, timestamp),
+      logDonation(
+        guildMember,
+        amount,
+        paymentSource,
+        paymentId,
+        senderName,
+        message,
+        timestamp,
+      ),
     ]);
   }
   catch (err) {
