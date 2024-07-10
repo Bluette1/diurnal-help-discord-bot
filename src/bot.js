@@ -4,19 +4,6 @@ import 'dotenv/config';
 import webhookListener from './webhooks/webhook_listener.js';
 import OpenAI from 'openai';
 
-
-const newCommands = {
-  name: 'ask',
-  description: 'Replies with Fire away!',
-};
-
-const commands = [
-  {
-    name: 'ping',
-    description: 'Replies with Pong!',
-  },
-];
-
 const TOKEN = process.env.TOKEN;
 const CLIENT_ID = process.env.CLIENT_ID;
 const PREFIX = 'sh!';
@@ -25,17 +12,34 @@ const BOT_ID = process.env.BOT_ID;
 const PREMIUM_CUTOFF = 10;
 const LOG_CHANNEL_ID = '1194720201464348704';
 
+const newCommands = {
+  name: 'quote',
+  description: 'Sends an inspirational quote!',
+};
+
+const commands = [
+  {
+    name: 'ping',
+    description: 'Replies with Pong!',
+  },
+  { name: 'ask', description: 'Replies with Fire away!' },
+];
+
 const rest = new REST({ version: '10' }).setToken(TOKEN);
 
 const updateCommands = async () => {
   try {
     console.log('Started refreshing application (/) commands.');
-    await rest.put(Routes.applicationCommands(CLIENT_ID), { body: commands });
-    await rest.post(Routes.applicationCommands(CLIENT_ID), { body: newCommands });
+
+    await rest.post(Routes.applicationCommands(CLIENT_ID), {
+      body: newCommands,
+    });
+
+    /*  If updating existing commands, uncomment the line below: */
+    /* await rest.put(Routes.applicationCommands(CLIENT_ID), { body: commands }); */
 
     console.log('Successfully reloaded application (/) commands.');
-  }
-  catch (error) {
+  } catch (error) {
     console.error(error);
   }
 };
@@ -73,6 +77,16 @@ client.on('interactionCreate', async (interaction) => {
     await interaction.reply('Fire away!');
     await user.createDM();
   }
+
+  if (interaction.commandName === 'quote') {
+    const { user } = interaction;
+    await user.createDM();
+    const reply = await fetchReply(
+      'Please send me an inspirational quote.',
+      user
+    );
+    await interaction.reply(reply);
+  }
 });
 
 const premiumRole = {
@@ -84,7 +98,7 @@ const premiumRole = {
 async function updateMemberRoleForDonation(guild, member, donationAmount) {
   if (guild && member && donationAmount >= PREMIUM_CUTOFF) {
     let role = Array.from(await guild.roles.fetch()).find(
-      (existingRole) => existingRole.name === premiumRole.name,
+      (existingRole) => existingRole.name === premiumRole.name
     );
 
     if (!role) {
@@ -127,6 +141,61 @@ commandHandlerForCommandName['addpayment'] = {
   },
 };
 
+const tasks = [];
+
+commandHandlerForCommandName['remind'] = {
+  execute: async (msg, args) => {
+    let repeat = false;
+
+    if (args.join(' ').startsWith('repeat')) {
+      repeat = true;
+    }
+
+    if (repeat) {
+      /* sh!remind repeat Buy groceries 30 10 */
+      const taskDescription = args.slice(1, args.length - 2).join(' ');
+      const time = parseInt(args[args.length - 2]);
+      const interval = parseInt(args[args.length - 1]);
+
+      tasks.push({
+        description: taskDescription,
+        time: time,
+        interval: interval,
+        userId: msg.author.id,
+      });
+      msg.reply(
+        `I will remind you about '${taskDescription}' every ${interval} minutes for ${time} minutes.`
+      );
+
+      const intervalId = setInterval(() => {
+        msg.author.send(`Hey, it's time to do: ${taskDescription}`);
+      }, interval * 60 * 1000);
+
+      setTimeout(() => {
+        clearInterval(intervalId);
+        msg.author.send(`The '${taskDescription}' reminder has ended.`);
+      }, time * 60 * 1000);
+    } else {
+      /* sh!remind Buy groceries 10 */
+      const taskDescription = args.slice(0, args.length - 1).join(' ');
+      const time = parseInt(args[args.length - 1]);
+
+      tasks.push({
+        description: taskDescription,
+        time: time,
+        userId: msg.author.id,
+      });
+      msg.reply(
+        `I will remind you about '${taskDescription}' in ${time} minutes.`
+      );
+
+      setTimeout(() => {
+        msg.author.send(`Hey, it's time to do: ${taskDescription}`);
+      }, time * 60 * 1000);
+    }
+  },
+};
+
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
@@ -136,7 +205,7 @@ let userInfo = {
   conversationArr: [],
 };
 
-const fetchReply = async function(message, user) {
+const fetchReply = async function (message, user) {
   const { user: currentUser, conversationArr } = userInfo;
   // Different user, reset the context
   if (user.id !== currentUser) {
@@ -158,9 +227,9 @@ const fetchReply = async function(message, user) {
   return response.choices[0].message.content;
 };
 
-
 client.on('messageCreate', async (msg) => {
   const content = msg.content;
+  console.log('*************MSG:', msg);
 
   const parts = content
     .split(' ')
@@ -191,8 +260,7 @@ client.on('messageCreate', async (msg) => {
 
   try {
     await command.execute(msg, args);
-  }
-  catch (err) {
+  } catch (err) {
     console.warn('Error handling command');
     console.warn(err);
   }
@@ -200,7 +268,7 @@ client.on('messageCreate', async (msg) => {
 
 client.on('guildMemberAdd', async (member) => {
   const channel = member.guild.channels.cache.find(
-    (ch) => ch.name === 'general',
+    (ch) => ch.name === 'general'
   );
   if (!channel) return;
   channel.send(`Welcome ${member}!`);
@@ -212,7 +280,7 @@ client.on('error', (err) => {
 
 async function findUserInString(str) {
   const lowercaseStr = str.toLowerCase();
-  const guilds = await client.guilds.cache;
+  const guilds = client.guilds.cache;
 
   let user,
     guild = null;
@@ -223,14 +291,14 @@ async function findUserInString(str) {
       members.map(async (member) => {
         if (
           lowercaseStr.indexOf(
-            `${member.user.username.toLowerCase()}#${member.user.discriminator}`,
+            `${member.user.username.toLowerCase()}#${member.user.discriminator}`
           ) !== -1
         ) {
           user = member;
           guild = currGuild;
         }
       });
-    }),
+    })
   );
 
   return { user, guild };
@@ -243,7 +311,7 @@ function logDonation(
   paymentId,
   senderName,
   message,
-  timestamp,
+  timestamp
 ) {
   const isKnownMember = !!member;
   const memberName = isKnownMember
@@ -251,27 +319,26 @@ function logDonation(
     : 'Unknown';
   const embedColor = isKnownMember ? 0x00ff00 : 0xff0000;
 
-  const logMessage = {
-    embed: {
-      title: 'Donation received',
-      color: embedColor,
-      timestamp: timestamp,
-      fields: [
-        { name: 'Payment Source', value: paymentSource, inline: true },
-        { name: 'Payment ID', value: paymentId, inline: true },
-        { name: 'Sender', value: senderName, inline: true },
-        { name: 'Donor Discord name', value: memberName, inline: true },
-        {
-          name: 'Donation amount',
-          value: donationAmount.toString(),
-          inline: true,
-        },
-        { name: 'Message', value: message, inline: true },
-      ],
-    },
+  const embed = {
+    title: 'Donation received',
+    color: embedColor,
+    timestamp,
+    fields: [
+      { name: 'Payment Source', value: paymentSource, inline: true },
+      { name: 'Payment ID', value: paymentId, inline: true },
+      { name: 'Sender', value: senderName, inline: true },
+      { name: 'Donor Discord name', value: memberName, inline: true },
+      {
+        name: 'Donation amount',
+        value: donationAmount.toString(),
+        inline: true,
+      },
+      { name: 'Message', value: message, inline: true },
+    ],
   };
 
-  client.createMessage(LOG_CHANNEL_ID, logMessage);
+  const channel = client.channels.cache.find((ch) => ch.id === LOG_CHANNEL_ID);
+  channel.send({ embeds: [embed] });
 }
 
 async function onDonation(
@@ -280,7 +347,7 @@ async function onDonation(
   timestamp,
   amount,
   senderName,
-  message,
+  message
 ) {
   try {
     const { user, guild } = await findUserInString(message);
@@ -295,11 +362,10 @@ async function onDonation(
         paymentId,
         senderName,
         message,
-        timestamp,
+        timestamp
       ),
     ]);
-  }
-  catch (err) {
+  } catch (err) {
     console.warn('Error handling donation event.');
     console.warn(err);
   }
