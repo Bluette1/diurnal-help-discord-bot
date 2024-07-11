@@ -3,6 +3,7 @@ import { REST, Routes } from 'discord.js';
 import 'dotenv/config';
 import webhookListener from './webhooks/webhook_listener.js';
 import OpenAI from 'openai';
+import cron from 'node-cron';
 
 const TOKEN = process.env.TOKEN;
 const CLIENT_ID = process.env.CLIENT_ID;
@@ -35,7 +36,7 @@ const updateCommands = async () => {
       body: newCommands,
     });
 
-    /*  If updating existing commands, uncomment the line below: */
+    /* If updating existing commands, uncomment the line below: */
     /* await rest.put(Routes.applicationCommands(CLIENT_ID), { body: commands }); */
 
     console.log('Successfully reloaded application (/) commands.');
@@ -145,13 +146,33 @@ const tasks = [];
 
 commandHandlerForCommandName['remind'] = {
   execute: async (msg, args) => {
-    let repeat = false;
-
-    if (args.join(' ').startsWith('repeat')) {
-      repeat = true;
+    if (args.length < 2) {
+      return msg.reply(
+        'Please provide a task and a time to remind you (e.g., "sh!remind at Take out the trash 20:00")'
+      );
     }
 
-    if (repeat) {
+    if (args.join(' ').startsWith('at')) {
+      const taskDescription = args.slice(1, -1).join(' ');
+      // Simplified Time-Only 24 hr format given such as 20:00
+      const time = `${args[args.length - 1]}`;
+
+      const hrs = time.split(':');
+      const cronExpression = `${hrs[1]} ${hrs[0]} * * *`;
+
+      // Schedule the reminder using cron
+
+      cron.schedule(
+        cronExpression,
+        () => {
+          msg.author.send(
+            `@${msg.author.username}, don't forget to: ${taskDescription}`
+          );
+        }
+      );
+
+      msg.reply(`I'll remind you to "${taskDescription}" at ${time}.`);
+    } else if (args.join(' ').startsWith('repeat')) {
       /* sh!remind repeat Buy groceries 30 10 */
       const taskDescription = args.slice(1, args.length - 2).join(' ');
       const time = parseInt(args[args.length - 2]);
@@ -229,8 +250,6 @@ const fetchReply = async function (message, user) {
 
 client.on('messageCreate', async (msg) => {
   const content = msg.content;
-  console.log('*************MSG:', msg);
-
   const parts = content
     .split(' ')
     .map((s) => s.trim())
