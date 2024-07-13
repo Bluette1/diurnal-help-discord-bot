@@ -13,12 +13,18 @@ const BOT_ID = process.env.BOT_ID;
 const PREMIUM_CUTOFF = 10;
 const LOG_CHANNEL_ID = '1194720201464348704';
 
-const newCommands = {
-  name: 'quote',
-  description: 'Sends an inspirational quote!',
-};
 /*
  * Can be used with the `put`
+
+  const newCommands = {
+    name: 'quote',
+    description: 'Sends an inspirational quote!',
+  };
+*/
+
+/*
+ * Can be used with the `put`
+ */
 const commands = [
   {
     name: 'ping',
@@ -26,20 +32,20 @@ const commands = [
   },
   { name: 'ask', description: 'Replies with Fire away!' },
 ];
-*/
 
 const rest = new REST({ version: '10' }).setToken(TOKEN);
 
 const updateCommands = async () => {
   try {
     console.log('Started refreshing application (/) commands.');
+    /* If posting new commands, uncomment the lines below: */
 
-    await rest.post(Routes.applicationCommands(CLIENT_ID), {
-      body: newCommands,
-    });
+    // await rest.post(Routes.applicationCommands(CLIENT_ID), {
+    //   body: newCommands,
+    // });
 
-    /* If updating existing commands, uncomment the line below: */
-    /* await rest.put(Routes.applicationCommands(CLIENT_ID), { body: commands }); */
+    /* If posting/updating existing commands, uncomment the line below: */
+    await rest.put(Routes.applicationCommands(CLIENT_ID), { body: commands });
 
     console.log('Successfully reloaded application (/) commands.');
   }
@@ -176,7 +182,6 @@ commandHandlerForCommandName['remind'] = {
       msg.reply(`I'll remind you to "${taskDescription}" at ${time}.`);
     }
     else if (args.join(' ').startsWith('repeat')) {
-
       /* sh!remind repeat Buy groceries 10 */
 
       const taskDescription = args.slice(1, args.length - 1).join(' ');
@@ -280,7 +285,12 @@ commandHandlerForCommandName['list'] = {
       return msg.reply('You don\'t have any scheduled reminders.');
     }
 
-    const taskList = tasks.map((task, index) => `${index + 1}. "${task.taskDescription}" time: ${task.time}`).join('\n');
+    const taskList = tasks
+      .map(
+        (task, index) =>
+          `${index + 1}. "${task.taskDescription}" time: ${task.time}`,
+      )
+      .join('\n');
     msg.author.send(`Your scheduled reminders:\n\n${taskList}`);
   },
 };
