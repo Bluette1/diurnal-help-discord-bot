@@ -17,8 +17,8 @@ const LOG_CHANNEL_ID = '1194720201464348704';
  * Can be used with the `put`
 
   const newCommands = {
-    name: 'quote',
-    description: 'Sends an inspirational quote!',
+    name: 'dosomething',
+    description: 'Does something!',
   };
 */
 
@@ -31,6 +31,7 @@ const commands = [
     description: 'Replies with Pong!',
   },
   { name: 'ask', description: 'Replies with Fire away!' },
+  { name: 'quote', description: 'Sends an inspirational quote!' },
 ];
 
 const rest = new REST({ version: '10' }).setToken(TOKEN);
@@ -48,8 +49,7 @@ const updateCommands = async () => {
     await rest.put(Routes.applicationCommands(CLIENT_ID), { body: commands });
 
     console.log('Successfully reloaded application (/) commands.');
-  }
-  catch (error) {
+  } catch (error) {
     console.error(error);
   }
 };
@@ -93,7 +93,7 @@ client.on('interactionCreate', async (interaction) => {
     await user.createDM();
     const reply = await fetchReply(
       'Please send me an inspirational quote.',
-      user,
+      user
     );
     await interaction.reply(reply);
   }
@@ -108,7 +108,7 @@ const premiumRole = {
 async function updateMemberRoleForDonation(guild, member, donationAmount) {
   if (guild && member && donationAmount >= PREMIUM_CUTOFF) {
     let role = Array.from(await guild.roles.fetch()).find(
-      (existingRole) => existingRole.name === premiumRole.name,
+      (existingRole) => existingRole.name === premiumRole.name
     );
 
     if (!role) {
@@ -157,7 +157,7 @@ commandHandlerForCommandName['remind'] = {
   execute: async (msg, args) => {
     if (args.length < 2) {
       return msg.reply(
-        'Please provide a task and a time to remind you (e.g., "sh!remind at Take out the trash 20:00")',
+        'Please provide a task and a time to remind you (e.g., "sh!remind at Take out the trash 20:00")'
       );
     }
 
@@ -170,7 +170,7 @@ commandHandlerForCommandName['remind'] = {
       const cronExpression = `${hrs[1]} ${hrs[0]} * * *`;
       const job = cron.schedule(cronExpression, () => {
         msg.author.send(
-          `@${msg.author.username}, don't forget to: ${taskDescription}`,
+          `@${msg.author.username}, don't forget to: ${taskDescription}`
         );
       });
       tasks.push({
@@ -180,15 +180,14 @@ commandHandlerForCommandName['remind'] = {
       });
 
       msg.reply(`I'll remind you to "${taskDescription}" at ${time}.`);
-    }
-    else if (args.join(' ').startsWith('repeat')) {
+    } else if (args.join(' ').startsWith('repeat')) {
       /* sh!remind repeat Buy groceries 10 */
 
       const taskDescription = args.slice(1, args.length - 1).join(' ');
       const interval = parseInt(args[args.length - 1]);
 
       msg.reply(
-        `I will remind you about '${taskDescription}' every ${interval} minutes`,
+        `I will remind you about '${taskDescription}' every ${interval} minutes`
       );
 
       const cronExpression = `*/${interval} * * * *`;
@@ -200,20 +199,19 @@ commandHandlerForCommandName['remind'] = {
         time: `every ${interval} minutes`,
         intervalId: job,
       });
-    }
-    else {
+    } else {
       /* sh!remind Buy groceries 10 */
       const taskDescription = args.slice(0, args.length - 1).join(' ');
       const time = parseInt(args[args.length - 1]);
       const cronExpression = `${time} * * * *`;
 
       msg.reply(
-        `I will remind you about '${taskDescription}' in ${time} minutes.`,
+        `I will remind you about '${taskDescription}' in ${time} minutes.`
       );
 
       const job = cron.schedule(cronExpression, () => {
         msg.author.send(
-          `@${msg.author.username}, don't forget to: ${taskDescription}`,
+          `@${msg.author.username}, don't forget to: ${taskDescription}`
         );
       });
 
@@ -246,14 +244,14 @@ commandHandlerForCommandName['newyear'] = {
   execute: (msg) => {
     const cronExpression = '0 0 12 1 1 *';
 
-    msg.reply('I will send you a new year\'s message every new year\'s.');
+    msg.reply("I will send you a new year's message every new year's.");
 
     const job = cron.schedule(cronExpression, () => {
       msg.author.send(`@${msg.author.username}, Happy New Year!`);
     });
 
     tasks.push({
-      taskDescription: 'Send a New Year\'s message',
+      taskDescription: "Send a New Year's message",
       time: '12:00 AM',
       intervalId: job,
     });
@@ -282,13 +280,13 @@ commandHandlerForCommandName['birthday'] = {
 commandHandlerForCommandName['list'] = {
   execute: (msg) => {
     if (tasks.length === 0) {
-      return msg.reply('You don\'t have any scheduled reminders.');
+      return msg.reply("You don't have any scheduled reminders.");
     }
 
     const taskList = tasks
       .map(
         (task, index) =>
-          `${index + 1}. "${task.taskDescription}" time: ${task.time}`,
+          `${index + 1}. "${task.taskDescription}" time: ${task.time}`
       )
       .join('\n');
     msg.author.send(`Your scheduled reminders:\n\n${taskList}`);
@@ -303,7 +301,7 @@ let userInfo = {
   conversationArr: [],
 };
 
-const fetchReply = async function(message, user) {
+const fetchReply = async function (message, user) {
   const { user: currentUser, conversationArr } = userInfo;
   // Different user, reset the context
   if (user.id !== currentUser) {
@@ -356,8 +354,7 @@ client.on('messageCreate', async (msg) => {
 
   try {
     await command.execute(msg, args);
-  }
-  catch (err) {
+  } catch (err) {
     console.warn('Error handling command');
     console.warn(err);
   }
@@ -365,7 +362,7 @@ client.on('messageCreate', async (msg) => {
 
 client.on('guildMemberAdd', async (member) => {
   const channel = member.guild.channels.cache.find(
-    (ch) => ch.name === 'general',
+    (ch) => ch.name === 'general'
   );
   if (!channel) return;
   channel.send(`Welcome ${member}!`);
@@ -388,14 +385,14 @@ async function findUserInString(str) {
       members.map(async (member) => {
         if (
           lowercaseStr.indexOf(
-            `${member.user.username.toLowerCase()}#${member.user.discriminator}`,
+            `${member.user.username.toLowerCase()}#${member.user.discriminator}`
           ) !== -1
         ) {
           user = member;
           guild = currGuild;
         }
       });
-    }),
+    })
   );
 
   return { user, guild };
@@ -408,7 +405,7 @@ function logDonation(
   paymentId,
   senderName,
   message,
-  timestamp,
+  timestamp
 ) {
   const isKnownMember = !!member;
   const memberName = isKnownMember
@@ -444,7 +441,7 @@ async function onDonation(
   timestamp,
   amount,
   senderName,
-  message,
+  message
 ) {
   try {
     const { user, guild } = await findUserInString(message);
@@ -459,11 +456,10 @@ async function onDonation(
         paymentId,
         senderName,
         message,
-        timestamp,
+        timestamp
       ),
     ]);
-  }
-  catch (err) {
+  } catch (err) {
     console.warn('Error handling donation event.');
     console.warn(err);
   }
