@@ -196,7 +196,7 @@ commandHandlerForCommandName['remind'] = {
 
       const job = cron.schedule(cronExpression, () => {
         msg.author.send(`Hey, it's time to do: ${taskDescription}`);
-        const index = tasks.findIndex((task) => task.intervalId === job);
+        const index = tasks.findIndex((task) => task.taskDescription == taskDescription);
         const { intervalId } = tasks[index];
         intervalId.stop();
         tasks.splice(index, 1);
@@ -222,7 +222,7 @@ commandHandlerForCommandName['remind'] = {
           `@${msg.author.username}, don't forget to: ${taskDescription}`,
         );
 
-        const index = tasks.findIndex((task) => task.intervalId === job);
+        const index = tasks.findIndex((task) => task.taskDescription == taskDescription);
         const { intervalId } = tasks[index];
         intervalId.stop();
         tasks.splice(index, 1);
