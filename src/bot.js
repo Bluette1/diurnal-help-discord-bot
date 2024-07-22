@@ -176,7 +176,6 @@ commandHandlerForCommandName['remind'] = {
       msg.reply(`I'll remind you to "${taskDescription}" at ${time}.`);
     }
     else if (args.join(' ').startsWith('repeat')) {
-
       /* sh!remind repeat Buy groceries 10 */
 
       const taskDescription = args.slice(1, args.length - 1).join(' ');
@@ -186,7 +185,8 @@ commandHandlerForCommandName['remind'] = {
         `I will remind you about '${taskDescription}' every ${interval} minutes`,
       );
 
-      const cronExpression = `*/${interval} * * * *`;
+      const cronExpression = `0 0/${interval} * 1/1 * *`;
+
       const job = cron.schedule(cronExpression, () => {
         msg.author.send(`Hey, it's time to do: ${taskDescription}`);
       });
@@ -200,21 +200,28 @@ commandHandlerForCommandName['remind'] = {
       /* sh!remind Buy groceries 10 */
       const taskDescription = args.slice(0, args.length - 1).join(' ');
       const time = parseInt(args[args.length - 1]);
-      const cronExpression = `${time} * * * *`;
+      const targetTime = new Date(Date.now() + 5 * 60 * 1000);
 
       msg.reply(
         `I will remind you about '${taskDescription}' in ${time} minutes.`,
       );
 
-      const job = cron.schedule(cronExpression, () => {
-        msg.author.send(
-          `@${msg.author.username}, don't forget to: ${taskDescription}`,
-        );
+      // Schedule the cron job to check every minute
+      const job = cron.schedule('* * * * *', () => {
+        const now = new Date();
+
+        if (now >= targetTime) {
+          msg.author.send(
+            `@${msg.author.username}, don't forget to: ${taskDescription}`,
+          );
+        }
       });
+
+      const period = `in ${time} minutes`;
 
       tasks.push({
         taskDescription,
-        time: `in ${time} minutes`,
+        time: period,
         intervalId: job,
       });
     }
@@ -280,7 +287,12 @@ commandHandlerForCommandName['list'] = {
       return msg.reply('You don\'t have any scheduled reminders.');
     }
 
-    const taskList = tasks.map((task, index) => `${index + 1}. "${task.taskDescription}" time: ${task.time}`).join('\n');
+    const taskList = tasks
+      .map(
+        (task, index) =>
+          `${index + 1}. "${task.taskDescription}" time: ${task.time}`,
+      )
+      .join('\n');
     msg.author.send(`Your scheduled reminders:\n\n${taskList}`);
   },
 };
