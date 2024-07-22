@@ -179,7 +179,7 @@ commandHandlerForCommandName['remind'] = {
       /* sh!remind repeat Buy groceries 10 */
 
       const taskDescription = args.slice(1, args.length - 1).join(' ');
-      const interval = parseInt(args[args.length - 1]);
+      const interval = args[args.length - 1];
 
       msg.reply(
         `I will remind you about '${taskDescription}' every ${interval} minutes`,
@@ -214,6 +214,10 @@ commandHandlerForCommandName['remind'] = {
           msg.author.send(
             `@${msg.author.username}, don't forget to: ${taskDescription}`,
           );
+          
+          const index = tasks.findIndex(task.intervalId == job)
+          tasks.splice(index, 1);
+          job.stop();
         }
       });
 
