@@ -162,11 +162,18 @@ commandHandlerForCommandName['remind'] = {
 
       const hrs = time.split(':');
       const cronExpression = `${hrs[1]} ${hrs[0]} * * *`;
-      const job = cron.schedule(cronExpression, () => {
-        msg.author.send(
-          `@${msg.author.username}, don't forget to: ${taskDescription}`,
-        );
-      });
+      const job = cron.schedule(
+        cronExpression,
+        () => {
+          msg.author.send(
+            `@${msg.author.username}, don't forget to: ${taskDescription}`,
+          );
+        },
+        {
+          scheduled: true,
+          timezone: 'Africa/Johannesburg',
+        },
+      );
       tasks.push({
         taskDescription,
         time,
@@ -189,6 +196,10 @@ commandHandlerForCommandName['remind'] = {
 
       const job = cron.schedule(cronExpression, () => {
         msg.author.send(`Hey, it's time to do: ${taskDescription}`);
+        const index = tasks.findIndex((task) => task.intervalId === job);
+        const { intervalId } = tasks[index];
+        intervalId.stop();
+        tasks.splice(index, 1);
       });
       tasks.push({
         taskDescription,
@@ -206,16 +217,15 @@ commandHandlerForCommandName['remind'] = {
         `I will remind you about '${taskDescription}' in ${time} minutes.`,
       );
 
-
       const job = cron.schedule(cronExpression, () => {
-
         msg.author.send(
           `@${msg.author.username}, don't forget to: ${taskDescription}`,
         );
 
-        const index = tasks.findIndex((task) => task.intervalId == job);
+        const index = tasks.findIndex((task) => task.intervalId === job);
+        const { intervalId } = tasks[index];
+        intervalId.stop();
         tasks.splice(index, 1);
-        job.stop();
       });
 
       const period = `in ${time} minutes`;
