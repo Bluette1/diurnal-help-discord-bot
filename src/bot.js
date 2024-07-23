@@ -147,6 +147,29 @@ commandHandlerForCommandName['addpayment'] = {
 
 const tasks = [];
 
+function createCronJob(msg, taskDescription, schedule, task) {
+  const job = cron.schedule(schedule, () => {
+    task(msg, taskDescription, job);
+  }, {
+    scheduled: true,
+  });
+  return job;
+}
+
+const taskThatStops = (msg, taskDescription, job) => {
+  console.log('Task executed');
+
+  msg.author.send(
+    `@${msg.author.username}, don't forget to: ${taskDescription}`,
+  );
+
+  // Stop the job
+  const index = tasks.findIndex((task) => task.intervalId === job);
+  job.stop();
+  tasks.splice(index, 1);
+  console.log('Job stopped');
+};
+
 commandHandlerForCommandName['remind'] = {
   execute: async (msg, args) => {
     if (args.length < 2) {
@@ -209,30 +232,15 @@ commandHandlerForCommandName['remind'] = {
     else {
       /* sh!remind Buy groceries 10 */
       const taskDescription = args.slice(0, args.length - 1).join(' ');
-      const time = parseInt(args[args.length - 1]);
-      const targetTime = new Date(Date.now() + time * 60 * 1000);
+      const time = args[args.length - 1];
+      const cronExpression = `*/${time} * * * *`;
 
       msg.reply(
         `I will remind you about '${taskDescription}' in ${time} minutes.`,
       );
 
 
-      // Schedule the cron job to check every 10 seconds
-
-      const job = cron.schedule('*/10 * * * * *', () => {
-        const now = new Date();
-
-        if (now >= targetTime) {
-          msg.author.send(
-            `@${msg.author.username}, don't forget to: ${taskDescription}`,
-          );
-
-          const index = tasks.findIndex((task) => task.taskDescription == taskDescription);
-          job.stop();
-          tasks.splice(index, 1);
-        }
-
-      });
+      const job = createCronJob(msg, taskDescription, cronExpression, taskThatStops);
 
       const period = `in ${time} minutes`;
 
