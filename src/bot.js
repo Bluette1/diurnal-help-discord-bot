@@ -153,6 +153,7 @@ commandHandlerForCommandName['addpayment'] = {
 
 const tasks = [];
 
+
 commandHandlerForCommandName['remind'] = {
   execute: async (msg, args) => {
     if (args.length < 2) {
@@ -168,11 +169,21 @@ commandHandlerForCommandName['remind'] = {
 
       const hrs = time.split(':');
       const cronExpression = `${hrs[1]} ${hrs[0]} * * *`;
-      const job = cron.schedule(cronExpression, () => {
-        msg.author.send(
-          `@${msg.author.username}, don't forget to: ${taskDescription}`
-        );
-      });
+      const job = cron.schedule(
+        cronExpression,
+        () => {
+          msg.author.send(
+            `@${msg.author.username}, don't forget to: ${taskDescription}`,
+          );
+          const index = tasks.findIndex((task) => task.taskDescription == taskDescription);
+          job.stop();
+          tasks.splice(index, 1);
+        },
+        {
+          scheduled: true,
+          timezone: 'Africa/Johannesburg',
+        },
+      );
       tasks.push({
         taskDescription,
         time,
@@ -180,17 +191,19 @@ commandHandlerForCommandName['remind'] = {
       });
 
       msg.reply(`I'll remind you to "${taskDescription}" at ${time}.`);
-    } else if (args.join(' ').startsWith('repeat')) {
+    }
+    else if (args.join(' ').startsWith('repeat')) {
       /* sh!remind repeat Buy groceries 10 */
 
       const taskDescription = args.slice(1, args.length - 1).join(' ');
-      const interval = parseInt(args[args.length - 1]);
+      const interval = args[args.length - 1];
 
       msg.reply(
         `I will remind you about '${taskDescription}' every ${interval} minutes`
       );
 
       const cronExpression = `*/${interval} * * * *`;
+
       const job = cron.schedule(cronExpression, () => {
         msg.author.send(`Hey, it's time to do: ${taskDescription}`);
       });
@@ -202,22 +215,26 @@ commandHandlerForCommandName['remind'] = {
     } else {
       /* sh!remind Buy groceries 10 */
       const taskDescription = args.slice(0, args.length - 1).join(' ');
-      const time = parseInt(args[args.length - 1]);
-      const cronExpression = `${time} * * * *`;
+      const time = args[args.length - 1];
+      const cronExpression = `*/${time} * * * *`;
 
       msg.reply(
         `I will remind you about '${taskDescription}' in ${time} minutes.`
       );
 
       const job = cron.schedule(cronExpression, () => {
+
         msg.author.send(
           `@${msg.author.username}, don't forget to: ${taskDescription}`
         );
       });
 
+
+      const period = `in ${time} minutes`;
+
       tasks.push({
         taskDescription,
-        time: `in ${time} minutes`,
+        time: period,
         intervalId: job,
       });
     }
@@ -236,6 +253,7 @@ commandHandlerForCommandName['stop'] = {
     const { taskDescription, intervalId } = tasks[index];
     intervalId.stop();
     tasks.splice(index, 1);
+
     msg.reply(`Reminder for "${taskDescription}" has been deleted.`);
   },
 };
@@ -286,7 +304,7 @@ commandHandlerForCommandName['list'] = {
     const taskList = tasks
       .map(
         (task, index) =>
-          `${index + 1}. "${task.taskDescription}" time: ${task.time}`
+          `${index + 1}. "${task.taskDescription}" time: ${task.time}`,
       )
       .join('\n');
     msg.author.send(`Your scheduled reminders:\n\n${taskList}`);
