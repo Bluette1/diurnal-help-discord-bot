@@ -147,28 +147,6 @@ commandHandlerForCommandName['addpayment'] = {
 
 const tasks = [];
 
-function createCronJob(msg, taskDescription, schedule, task) {
-  const job = cron.schedule(schedule, () => {
-    task(msg, taskDescription, job);
-  }, {
-    scheduled: true,
-  });
-  return job;
-}
-
-const taskThatStops = (msg, taskDescription, job) => {
-  console.log('Task executed');
-
-  msg.author.send(
-    `@${msg.author.username}, don't forget to: ${taskDescription}`,
-  );
-
-  // Stop the job
-  const index = tasks.findIndex((task) => task.intervalId === job);
-
-  commandHandlerForCommandName['stop'].execute(msg, index + 1, false);
-  console.log('Job stopped');
-};
 
 commandHandlerForCommandName['remind'] = {
   execute: async (msg, args) => {
@@ -239,8 +217,13 @@ commandHandlerForCommandName['remind'] = {
         `I will remind you about '${taskDescription}' in ${time} minutes.`,
       );
 
+      const job = cron.schedule(cronExpression, () => {
 
-      const job = createCronJob(msg, taskDescription, cronExpression, taskThatStops);
+        msg.author.send(
+          `@${msg.author.username}, don't forget to: ${taskDescription}`,
+        );
+      });
+
 
       const period = `in ${time} minutes`;
 
@@ -254,7 +237,7 @@ commandHandlerForCommandName['remind'] = {
 };
 
 commandHandlerForCommandName['stop'] = {
-  execute: (msg, idx, show = true) => {
+  execute: (msg, idx) => {
     const index = parseInt(idx) - 1;
 
     if (index < 0 || index >= tasks.length) {
@@ -265,10 +248,8 @@ commandHandlerForCommandName['stop'] = {
     const { taskDescription, intervalId } = tasks[index];
     intervalId.stop();
     tasks.splice(index, 1);
-    if (show) {
-      msg.reply(`Reminder for "${taskDescription}" has been deleted.`);
 
-    }
+    msg.reply(`Reminder for "${taskDescription}" has been deleted.`);
   },
 };
 
