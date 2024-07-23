@@ -209,21 +209,29 @@ commandHandlerForCommandName['remind'] = {
     else {
       /* sh!remind Buy groceries 10 */
       const taskDescription = args.slice(0, args.length - 1).join(' ');
-      const time = args[args.length - 1];
-      const cronExpression = `*/${time} * * * *`;
+      const time = parseInt(args[args.length - 1]);
+      const targetTime = new Date(Date.now() + time * 60 * 1000);
 
       msg.reply(
         `I will remind you about '${taskDescription}' in ${time} minutes.`,
       );
 
-      const job = cron.schedule(cronExpression, () => {
-        msg.author.send(
-          `@${msg.author.username}, don't forget to: ${taskDescription}`,
-        );
 
-        const index = tasks.findIndex((task) => task.taskDescription == taskDescription);
-        job.stop()
-        tasks.splice(index, 1);
+      // Schedule the cron job to check every 10 seconds
+
+      const job = cron.schedule('*/10 * * * * *', () => {
+        const now = new Date();
+
+        if (now >= targetTime) {
+          msg.author.send(
+            `@${msg.author.username}, don't forget to: ${taskDescription}`,
+          );
+
+          const index = tasks.findIndex((task) => task.taskDescription == taskDescription);
+          job.stop();
+          tasks.splice(index, 1);
+        }
+
       });
 
       const period = `in ${time} minutes`;
