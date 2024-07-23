@@ -165,8 +165,8 @@ const taskThatStops = (msg, taskDescription, job) => {
 
   // Stop the job
   const index = tasks.findIndex((task) => task.intervalId === job);
-  job.stop();
-  tasks.splice(index, 1);
+
+  commandHandlerForCommandName['stop'].execute(msg, index + 1, false);
   console.log('Job stopped');
 };
 
@@ -254,7 +254,7 @@ commandHandlerForCommandName['remind'] = {
 };
 
 commandHandlerForCommandName['stop'] = {
-  execute: (msg, idx) => {
+  execute: (msg, idx, show = true) => {
     const index = parseInt(idx) - 1;
 
     if (index < 0 || index >= tasks.length) {
@@ -265,7 +265,10 @@ commandHandlerForCommandName['stop'] = {
     const { taskDescription, intervalId } = tasks[index];
     intervalId.stop();
     tasks.splice(index, 1);
-    msg.reply(`Reminder for "${taskDescription}" has been deleted.`);
+    if (show) {
+      msg.reply(`Reminder for "${taskDescription}" has been deleted.`);
+
+    }
   },
 };
 
