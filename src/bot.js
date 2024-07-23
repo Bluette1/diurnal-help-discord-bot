@@ -168,6 +168,9 @@ commandHandlerForCommandName['remind'] = {
           msg.author.send(
             `@${msg.author.username}, don't forget to: ${taskDescription}`,
           );
+          const index = tasks.findIndex((task) => task.taskDescription == taskDescription);
+          job.stop();
+          tasks.splice(index, 1);
         },
         {
           scheduled: true,
@@ -196,10 +199,6 @@ commandHandlerForCommandName['remind'] = {
 
       const job = cron.schedule(cronExpression, () => {
         msg.author.send(`Hey, it's time to do: ${taskDescription}`);
-        const index = tasks.findIndex((task) => task.taskDescription == taskDescription);
-        const { intervalId } = tasks[index];
-        intervalId.stop();
-        tasks.splice(index, 1);
       });
       tasks.push({
         taskDescription,
@@ -223,8 +222,7 @@ commandHandlerForCommandName['remind'] = {
         );
 
         const index = tasks.findIndex((task) => task.taskDescription == taskDescription);
-        const { intervalId } = tasks[index];
-        intervalId.stop();
+        job.stop()
         tasks.splice(index, 1);
       });
 
