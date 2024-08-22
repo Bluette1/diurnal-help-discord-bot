@@ -55,7 +55,7 @@ A Discord bot with various interactive features to enhance your server experienc
 
 
 
-    TOKEN=your discord_bot_token
+    TOKEN=your_discord_bot_token
     CLIENT_ID=the_discord_client_id
     BOT_OWNER_ID=owner_discord_id
     OPENAI_API_KEY=your_open_ai_api_key
@@ -81,10 +81,10 @@ Use commands to interact with the bot:
 - sh!list: Checks the current list of reminders.
 - sh!addpayment [@your_discord_username] [$Amount]: records a donation made
 - sh!stop [task_number]: Stops the given task.
-- /quote: Receives an inspirational quote.
+- /quote: User receives an inspirational quote.
 - sh!newyear: Checks if today is New Year's Day and sends a message.
-- sh!birtday [Month] [Day]: Checks if today is your birtday and sends you a message.
-- sh!remind [task] at [time]: Sets a reminder for a task at given time.
+- sh!birthday [Month] [Day]: Checks if today is your birthday and sends you a message.
+- sh!remind [task] at [24_hr_format_time]: Sets a reminder for a task at given time.
 - sh!remind [task] [time_in_x_minutes]: Sets a reminder for a task in x minutes.
 - sh!remind repeat [task] [time_in_x_minutes]: Sets a reminder for a task every x minutes.
 
