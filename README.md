@@ -6,6 +6,12 @@ A Discord bot with various interactive features to enhance your server experienc
 
 [Add diurnal-help on Discord ](https://discord.com/oauth2/authorize?client_id=1261499835228487680)
 
+# Built With 
+- Nodejs
+- [Discordjs](https://discordjs.guide/)
+- [Node Cron](https://www.npmjs.com/package/node-cron)
+- OpenAI
+
 ## Features
 
 - **Welcome Message:** Greets new members when they join the server.
